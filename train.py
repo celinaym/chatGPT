@@ -3,6 +3,7 @@ import torch    # TODO we use PyTorch
 import numpy
 from torch import nn
 from torch.nn import functional as F
+import bigram_language
 
 # TODO 1. download tiny-shakespeare datasets
 url = 'https://raw.githubusercontent.com/karpathy/char-rnn/master/data/tinyshakespeare/input.txt'
@@ -69,32 +70,39 @@ def get_batch(split):
 
 
 xb, yb = get_batch('train')
-
 for b in range(batch_size):
     for t in range(block_size):
         context = xb[b, :t+1]
         target = yb[b,t]
         print(f"when input is {context} the target: {target}")
 
+m = bigram_language.BigramLanguageModel(vocab_size)
+logits, loss = m(xb, yb)     # TODO call def forward(train_data, val_data)
+print(logits.shape)
+print(loss)
+print(decode(m.generate(idx=torch.zeros((1, 1), dtype=torch.long), max_new_tokens=100)[0].tolist()))  # garbage value
 
-class BigramLanguageModel(nn.Module):
+# TODO 10. create a PyTorch optimizer(lr=learning_rate)
+optimizer = torch.optim.AdamW(m.parameters(), lr=1e-3)
 
-    def __init__(self, vocab_size):
-        super().__init__()
-        # TODO create Token Embedding Table
-        self.token_embedding_table = nn.Embedding(vocab_size, vocab_size)   # TODO matrix, vocab_size x vocab_size
+batch_size = 32
+for steps in range(1000):  # TODO increase number of steps for good results...
 
-    def forward(self, idx, targets):
-        # TODO pluck out a row of that embedding table corresponsding to its index
-        logits = self.token_embedding_table(idx)    # TODO Pi torch gonna arrange (Batch X Time X Channel(vocab_size))
+    # TODO sample a batch of data
+    xb, yb = get_batch('train')
 
-        return logits
+    # TODO evaluate the loss
+    logits, loss = m(xb, yb)
+    # TODO sets the grad. of all optimized torch.Tensors to zero
+    optimizer.zero_grad(set_to_none=True)
+    # TODO compute the gradients
+    loss.backward()
+    # TODO performs a single optimization step(params update). called once the grad. are computed using backward()
+    optimizer.step()
 
-
-m = BigramLanguageModel(vocab_size)
-out = m(xb, yb)     # TODO call def forward(train_data, val_data)
-print(out.shape)
-
+print(loss.item())
+# TODO max_new_tokens increases -> models more in progress
+print(decode(m.generate(idx= torch.zeros((1, 1), dtype=torch.long), max_new_tokens=500)[0].tolist()))
 
 
 
