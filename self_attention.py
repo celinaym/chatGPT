@@ -35,3 +35,30 @@ wei = F.softmax(wei, dim=-1)
 xbow3 = wei @ x
 torch.allclose(xbow, xbow3)
 
+# TODO version 4) self-attention!
+torch.manual_seed(1337)
+B,T,C = 4,8,32  # batch, time, channels
+x = torch.randn(B,T,C)
+
+# TODO let's see a single Head perform self-attention
+head_size = 16
+# TODO every single token at each position will emit 2 vectors(query, key)
+key = nn.Linear(C, head_size, bias=False)   # TODO key --> what do I contain
+query = nn.Linear(C, head_size, bias=False) # TODO query --> what am I looking for
+value = nn.Linear(C, head_size, bias=False)
+k = key(x)   # (B, T, 16)
+q = query(x) # (B, T, 16)
+# TODO all the queries will dot product with all the keys
+wei =  q @ k.transpose(-2, -1) # (B, T, 16) @ (B, 16, T) ---> (B, T, T)
+
+tril = torch.tril(torch.ones(T, T))
+#wei = torch.zeros((T,T))
+wei = wei.masked_fill(tril == 0, float('-inf'))
+wei = F.softmax(wei, dim=-1)
+
+v = value(x)
+out = wei @ v
+#out = wei @ x
+
+out.shape
+
